@@ -5,6 +5,7 @@ import NovaReceita from './pages/NovaReceita'
 import Pedidos from './pages/Pedidos'
 import Alertas from './pages/Alertas'
 import Orcamentos from './pages/Orcamentos'
+import Afericao from './pages/Afericao'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/receita"     element={<NovaReceita />} />
         <Route path="/orcamentos"  element={<Orcamentos />} />
         <Route path="/pedidos"     element={<Pedidos />} />
+        <Route path="/afericao"    element={<Afericao />} />
         <Route path="/alertas"     element={<Alertas />} />
       </Routes>
     </Layout>

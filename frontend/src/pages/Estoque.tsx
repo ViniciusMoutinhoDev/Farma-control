@@ -31,6 +31,8 @@ export default function Estoque() {
   const [editando, setEditando] = useState<MateriaPrima | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [confirmDelete, setConfirmDelete] = useState<MateriaPrima | null>(null);
+  const [modalCsvOpen, setModalCsvOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   const qc = useQueryClient();
   const { showToast } = useToast();
@@ -105,6 +107,26 @@ export default function Estoque() {
     onError: () => showToast("Erro ao remover.", "error"),
   });
 
+  const importarCsv = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/materias/importar-csv", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["materias"] });
+      setModalCsvOpen(false);
+      setCsvFile(null);
+      showToast(`${data.inseridas} novas inseridas, ${data.atualizadas} atualizadas.`, "success");
+    },
+    onError: () => showToast("Erro ao importar CSV verifique as colunas.", "error"),
+  });
+
   const inputStyle = {
     width: "100%",
     border: "0.5px solid rgba(0,0,0,0.15)",
@@ -155,28 +177,54 @@ export default function Estoque() {
             {materias.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          onClick={openNova}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            background: "#1a3a5c",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "8px 14px",
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-          </svg>
-          Nova Matéria-Prima
-        </button>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            onClick={() => setModalCsvOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "transparent",
+              color: "#378ADD",
+              border: "1px solid #378ADD",
+              borderRadius: 6,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Importar CSV
+          </button>
+          <button
+            onClick={openNova}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#1a3a5c",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            Nova Matéria-Prima
+          </button>
+        </div>
       </div>
 
       {/* Busca */}
@@ -577,6 +625,90 @@ export default function Estoque() {
           Tem certeza que deseja remover{" "}
           <strong>{confirmDelete?.nome}</strong>? Esta ação não pode ser desfeita.
         </p>
+      </Modal>
+
+      {/* Modal: Importar CSV */}
+      <Modal
+        isOpen={modalCsvOpen}
+        onClose={() => { setModalCsvOpen(false); setCsvFile(null); }}
+        title="Importar CSV em Massa"
+        footer={
+          <>
+            <button
+              onClick={() => { setModalCsvOpen(false); setCsvFile(null); }}
+              style={{
+                border: "0.5px solid rgba(0,0,0,0.15)",
+                background: "none",
+                borderRadius: 6,
+                padding: "7px 16px",
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: "pointer",
+                color: "#6b7280",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => csvFile && importarCsv.mutate(csvFile)}
+              disabled={importarCsv.isPending || !csvFile}
+              style={{
+                background: "#1a3a5c",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                padding: "7px 16px",
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: importarCsv.isPending || !csvFile ? 0.7 : 1,
+              }}
+            >
+              {importarCsv.isPending ? "Enviando..." : "Importar Arquivo"}
+            </button>
+          </>
+        }
+      >
+        <div style={{ padding: "8px 0" }}>
+          <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
+            Faça upload de uma planilha CSV. O sistema usará o cabeçalho para mapear os dados. Produtos já cadastrados serão atualizados automaticamente.
+          </p>
+          <div style={{ background: "#f4f5f7", padding: 12, borderRadius: 6, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Colunas Esperadas:</div>
+            <div style={{ fontSize: 11, color: "#6b7280", fontFamily: "monospace" }}>Nome, Quantidade, Estoque Minimo, Preco Compra, Fornecedor</div>
+          </div>
+          
+          <label
+             style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px dashed #ccc",
+                borderRadius: 8,
+                padding: 32,
+                cursor: "pointer",
+                background: "#fafafa"
+             }}
+          >
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" style={{ marginBottom: 8 }}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+             </svg>
+             <span style={{ fontSize: 14, color: "#1a1a1a", fontWeight: 500 }}>
+               {csvFile ? csvFile.name : "Clique para selecionar o CSV"}
+             </span>
+             <input 
+               type="file" 
+               accept=".csv" 
+               onChange={(e) => setCsvFile(e.target.files ? e.target.files[0] : null)}
+               style={{ display: "none" }}
+             />
+          </label>
+        </div>
       </Modal>
     </div>
   );

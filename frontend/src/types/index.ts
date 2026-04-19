@@ -45,3 +45,21 @@ export interface Pedido {
   criado_em: string;
   atualizado_em: string | null;
 }
+
+export type TipoMovimentacao = "entrada" | "saida_pedido" | "ajuste_balanca";
+
+export interface MovimentacaoEstoque {
+  id: number;
+  materia_id: number;
+  tipo: TipoMovimentacao;
+  quantidade_anterior: number;
+  quantidade_nova: number;
+  diferenca: number;
+  motivo: string | null;
+  criado_em: string;
+}
+
+export interface PayloadAfericao {
+  peso_balanca: number;
+  motivo?: string;
+}

@@ -26,3 +26,7 @@ class MateriaPrimaOut(MateriaPrimaBase):
     status_alerta: str = "ok"  # "ok" | "baixo" | "critico" — calculado no router
 
     model_config = {"from_attributes": True}
+
+class MateriaPrimaAferir(BaseModel):
+    peso_balanca: float
+    motivo: Optional[str] = None
